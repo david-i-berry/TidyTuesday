@@ -27,7 +27,7 @@ simpsons %>% head()
 The data appear to be all character data of one description or another but on examination it appears some rows have mulitple values per cell. Before we want to progress any further we want to separate out these values to new rows.
 ```{r}
 # Example showing multiple values per cell
-simpsons %>% filter( grepl(';', number) )
+simpsons %>% filter( grepl(';', number) ) %>% head()
 # Separate rows containing split episodes
 simpsons %>% separate_rows( c('number','production_code'), sep='; ') -> simpsons
 ```
@@ -60,4 +60,4 @@ circos.trackPlotRegion(track.index = 1, panel.fun = function(x, y) {
 
 # Summary
 
-And there we have - my first #TidyTuesday project. I've think I've learnt some new skills and plan to continue following the various projects as and when I have time.
+And there we have it - my first #TidyTuesday project. The relationships look as expected based on other peoples results, with Marcia Wallce making the most guest appearances and many of which have been with Phil Hartman. I've learnt some new skills / knowledge in doing this so would class it as a success and plan to continue following the various projects as and when I have time.
