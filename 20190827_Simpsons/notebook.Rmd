@@ -1,0 +1,63 @@
+---
+title: "TidyTuesday - Simpsons"
+output: html_notebook
+---
+
+# Background
+
+I've been a user of R for a few (5+) years now, but mostly using base R and graphics (some lattice) but with data sourced from a PostgreSQL + PostGIS database. The data tend to be environmental data, either in situ meteorological / climate observations from over the oceans or satellite data.
+
+To contiue learning / development I've recently been thinking about learning and using the Tidy family of packages and have followed the last few #TidyTuedays. This notebook is my first attempt at a project from the #TidyTuesday projects.
+
+# R environment
+As noted on the #TidyTuesday github readme (https://github.com/rfordatascience/tidytuesday/blob/master/README.md) the background to #TidyTuesday is within the R4DS Online Learning Community with a focus on the Tidyverse. As such, I've tried to use those packages, the first step is to load the required libraries. Note: I'm a fan of circular Chord Diagrams and have used the non-Tidyverse ciclize package for generating these plots.
+```{r}
+library(tidyr)
+library(dplyr)
+library(circlize)
+```
+
+# Data
+The data for each weeks project are uploaded to github, with this weeks project consisting of data on the guest stars appearing in the different episodes. This data has been source from Wikipedia (https://en.wikipedia.org/wiki/List_of_The_Simpsons_guest_stars_(seasons_1%E2%80%9320)). The first step in the project is to load the data and handily a one liner is provided to do that in the readme for the project.
+```{r}
+# Load data
+simpsons <- readr::read_delim("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-08-27/simpsons-guests.csv", delim = "|", quote = "")
+simpsons %>% head()
+```
+The data appear to be all character data of one description or another but on examination it appears some rows have mulitple values per cell. Before we want to progress any further we want to separate out these values to new rows.
+```{r}
+# Example showing multiple values per cell
+simpsons %>% filter( grepl(';', number) )
+# Separate rows containing split episodes
+simpsons %>% separate_rows( c('number','production_code'), sep='; ') -> simpsons
+```
+
+# Analysis
+Now our data should be loaded and cleaned, there may be other issues with the data in addition to those described above but I've not had time to dig / explore any further. As noted above, I like chord diagrams for looking at relationships. In order to generate these we need to summarise the data with an adjacency matrix. Before we generate the adjacency matrix we want to filter out those guest stars appearing in less than 10 episodes. This is an arbitrary choice but without thinning the data our plot will have many connections with a single link.
+```{r}
+simpsons %>% group_by( guest_star ) %>% filter( n() >= 10 ) ->simpsons_subset_n10
+```
+Now perform outer join on number (or production code) to get all pairs of occurances for stars and remove any duplicate or self matches.
+```{r}
+simpsons_subset_n10 %>% left_join( y = simpsons_subset_n10, by = 'number')  %>% 
+   select( c('number','guest_star.x','guest_star.y') ) %>%
+   group_by(.dots=c('guest_star.x','guest_star.y') )  %>% 
+   summarise( count = n()) %>% filter( guest_star.x != guest_star.y & guest_star.x < guest_star.y) %>% 
+   data.frame() -> new.df
+```
+Now generate plot.
+```{r, out.width='100%'}
+par(mar=c(2,2,2,2))
+chordDiagram(new.df, annotationTrack = "grid" , preAllocateTracks = 1)
+circos.trackPlotRegion(track.index = 1, panel.fun = function(x, y) {
+     xlim = get.cell.meta.data("xlim")
+     ylim = get.cell.meta.data("ylim")
+     sector.name = get.cell.meta.data("sector.index")
+     circos.text(mean(xlim), ylim[1] + .5, sector.name, cex = 0.5, facing = "outside", niceFacing = TRUE, adj = c(0, 0.5))
+     circos.axis(h = "top", labels.cex = 0.5, major.tick.percentage = 0.2, sector.index = sector.name, track.index = 2)
+ }, bg.border = NA)
+```
+
+# Summary
+
+And there we have - my first #TidyTuesday project. I've think I've learnt some new skills and plan to continue following the various projects as and when I have time.
